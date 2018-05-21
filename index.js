@@ -12,8 +12,25 @@ let { CONFIG_FILE } = process.env
 
 let config
 
-router.get('/', async ctx => {
-  ctx.body = 'ok'
+const compareVersion = (a, b) => {
+  if (a === b) {
+    return 0
+  }
+  if (semver.lt(a, b)) {
+    return 1
+  }
+  return -1
+}
+
+router.get('/versions', async ctx => {
+  let { domain } = ctx.request.query
+  if (!domain) {
+    ctx.throw(403, 'parameter domain unspecified')
+  }
+  if (!config.hasOwnProperty(domain)) {
+    ctx.throw(403, 'no such domain')
+  }
+  ctx.body = R.keys(config[domain]).sort(compareVersion)
 })
 
 router.get('/:domain/:version', async ctx => {
@@ -25,15 +42,7 @@ router.get('/:domain/:version', async ctx => {
     ctx.throw(403, 'parameter version unspecified')
   }
   if (version === 'latest') {
-    version = R.keys(R.propOr({}, domain, config)).sort((a, b) => {
-      if (a === b) {
-        return 0
-      }
-      if (semver.lt(a, b)) {
-        return 1
-      }
-      return -1
-    })[0]
+    version = R.keys(R.propOr({}, domain, config)).sort(compareVersion)[0]
   }
   if (!version) {
     ctx.throw(403, 'no such apk')

@@ -1,5 +1,7 @@
 GET http://localhost:5000/apk-api/foo/latest http/1.1
 
+GET http://localhost:5000/apk-api/versions?domain=foo http/1.1
+
 GET http://localhost:5000/apk-api/foo/1.0.0 http/1.1
 
 GET http://localhost:5000/apk-api/foo/1.0.1 http/1.1
