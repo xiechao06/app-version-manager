@@ -22,15 +22,53 @@ const compareVersion = (a, b) => {
   return -1
 }
 
+router.get('/', async ctx => {
+  let { domain, version } = ctx.request.query
+
+  if (!domain) {
+    ctx.throw(403, 'parameter domain not specified')
+  }
+  if (!version) {
+    version = 'latest'
+  }
+
+  ctx.body = {
+    data: [].concat(domain).map(domain => {
+      if (!config.hasOwnProperty(domain)) {
+        return {
+          domain, apks: null
+        }
+      }
+      let apks = [].concat(version).map(version => {
+        if (version === 'latest') {
+          return R.sort(
+            (a, b) => compareVersion(a.version, b.version),
+            config[domain]
+          )[0]
+        }
+        return R.find(it => it.version === version, config[domain]) || null
+      })
+      return {
+        domain,
+        apks
+      }
+    })
+  }
+})
+
 router.get('/versions', async ctx => {
   let { domain } = ctx.request.query
   if (!domain) {
     ctx.throw(403, 'parameter domain unspecified')
   }
-  if (!config.hasOwnProperty(domain)) {
-    ctx.throw(403, 'no such domain')
+  ctx.body = {
+    data: [].concat(domain).map(domain => ({
+      domain,
+      versions: config.hasOwnProperty(domain)
+        ? config[domain].map(it => it.version).sort(compareVersion)
+        : null
+    }))
   }
-  ctx.body = R.keys(config[domain]).sort(compareVersion)
 })
 
 router.get('/:domain/:version', async ctx => {
@@ -41,13 +79,17 @@ router.get('/:domain/:version', async ctx => {
   if (!version) {
     ctx.throw(403, 'parameter version unspecified')
   }
+
+  if (!config.hasOwnProperty(domain)) {
+    ctx.throw(403, 'no such domain')
+  }
+
   if (version === 'latest') {
-    version = R.keys(R.propOr({}, domain, config)).sort(compareVersion)[0]
+    ctx.body = R.sort((a, b) => compareVersion(a.version, b.version),
+      config[domain])[0] || ctx.throw(403, 'no such version')
+    return
   }
-  if (!version) {
-    ctx.throw(403, 'no such apk')
-  }
-  ctx.body = R.pathOr(null, [domain, version])(config) || ctx.throw(403, 'no such apk')
+  ctx.body = R.find(it => it.version === version, config[domain]) || ctx.throw(403, 'no such version')
 })
 
 router.post('/:domain/:version', async ctx => {
@@ -65,12 +107,13 @@ router.post('/:domain/:version', async ctx => {
   }
 
   if (!config.hasOwnProperty(domain)) {
-    config[domain] = {}
+    config[domain] = []
   }
-  if (config[domain].hasOwnProperty(version)) {
+  if (~config[domain].map(it => it.version).indexOf(version)) {
     ctx.throw('403', `apk(domain: ${domain}, version: ${version}) exists`)
   }
-  config[domain][version] = ctx.request.body
+  // it just push, so versions is not stored descendentally
+  config[domain].push(Object.assign({ version }, ctx.request.body))
   if (process.env.DEBUG) {
     console.log('update config: ', JSON.stringify(config, null, 4))
   }
