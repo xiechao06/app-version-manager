@@ -7,6 +7,7 @@
   "author": "xiechao06 <xiechao06@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "commander": "^2.15.1",
     "dotenv": "^5.0.1",
     "fs-extra": "^6.0.1",
     "koa": "^2.5.1",
@@ -23,6 +24,11 @@
   },
   "devDependencies": {
     "forever": "^0.15.3",
-    "standard": "^11.0.1"
+    "minimist": "^1.2.0",
+    "shelljs": "^0.8.2",
+    "shipit-cli": "^4.1.0",
+    "shipit-deploy": "^4.1.0",
+    "standard": "^11.0.1",
+    "url-join": "^4.0.0"
   }
 }
