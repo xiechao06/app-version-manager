@@ -5,6 +5,7 @@ const router = new (require('koa-router'))()
 const fs = require('fs-extra')
 const R = require('ramda')
 const semver = require('semver')
+const { ERROR_CODES } = require('./constant')
 
 const app = new Koa()
 
@@ -74,22 +75,33 @@ router.get('/versions', async ctx => {
 router.get('/:domain/:version', async ctx => {
   let { domain, version } = ctx.params
   if (!domain) {
-    ctx.throw(403, 'parameter domain unspecified')
+    ctx.throw(403, 'parameter domain unspecified', {
+      code: ERROR_CODES.INVALID_ARGUMENTS
+    })
   }
   if (!version) {
-    ctx.throw(403, 'parameter version unspecified')
+    ctx.throw(403, 'parameter version unspecified', {
+      code: ERROR_CODES.INVALID_ARGUMENTS
+    })
   }
 
   if (!config.hasOwnProperty(domain)) {
-    ctx.throw(403, 'no such domain')
+    ctx.throw(403, 'no such domain', {
+      code: ERROR_CODES.INVALID_DOMAIN
+    })
   }
 
   if (version === 'latest') {
     ctx.body = R.sort((a, b) => compareVersion(a.version, b.version),
-      config[domain])[0] || ctx.throw(403, 'no such version')
+      config[domain])[0] || ctx.throw(403, 'no such version', {
+        code: ERROR_CODES.UNKNOWN_VERSION
+      })
     return
   }
-  ctx.body = R.find(it => it.version === version, config[domain]) || ctx.throw(403, 'no such version')
+  ctx.body = R.find(it => it.version === version, config[domain]) ||
+    ctx.throw(403, 'no such version', {
+      code: ERROR_CODES.UNKNOWN_VERSION
+    })
 })
 
 router.post('/:domain/:version', async ctx => {
@@ -97,20 +109,28 @@ router.post('/:domain/:version', async ctx => {
   let { url } = ctx.request.body
 
   if (!url) {
-    ctx.throw(403, 'parameter url unspecified')
+    ctx.throw(403, 'parameter url unspecified', {
+      code: ERROR_CODES.INVALID_ARGUMENTS
+    })
   }
   if (!version) {
-    ctx.throw(403, 'parameter version unspecified')
+    ctx.throw(403, 'parameter version unspecified', {
+      code: ERROR_CODES.INVALID_ARGUMENTS
+    })
   }
   if (!domain) {
-    ctx.throw(403, 'parameter domain unspecified')
+    ctx.throw(403, 'parameter domain unspecified', {
+      code: ERROR_CODES.INVALID_ARGUMENTS
+    })
   }
 
   if (!config.hasOwnProperty(domain)) {
     config[domain] = []
   }
   if (~config[domain].map(it => it.version).indexOf(version)) {
-    ctx.throw('403', `apk(domain: ${domain}, version: ${version}) exists`)
+    ctx.throw(403, `apk(domain: ${domain}, version: ${version}) exists`, {
+      code: ERROR_CODES.VERSION_EXISTS
+    })
   }
   // it just push, so versions is not stored descendentally
   config[domain].push(Object.assign({ version }, ctx.request.body))

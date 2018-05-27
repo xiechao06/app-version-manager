@@ -3,8 +3,7 @@ require('dotenv').config()
 const program = require('commander')
 const fetch = require('node-fetch')
 const urlJoin = require('url-join')
-
-console.log(process.argv)
+const { ERROR_CODES } = require('./constant')
 
 program
   .option('--backend <backend>',
@@ -37,6 +36,14 @@ program
         })
       })
       if (!rsp.ok) {
+        if (rsp.status === 403) {
+          let error = new Error()
+          error.status = rsp.status
+          let { code, message } = await rsp.json()
+          error.code = code
+          error.message = message
+          throw error
+        }
         throw new Error(await rsp.text())
       }
     })()
@@ -44,6 +51,10 @@ program
         console.log('success')
       })
       .catch(function (err) {
+        if (err.code === ERROR_CODES.VERSION_EXISTS) {
+          console.debug(`Warning: ${err.message}, it will be skipped`)
+          return
+        }
         console.log(err.message)
         process.exit(1)
       })
