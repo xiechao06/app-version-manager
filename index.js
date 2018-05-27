@@ -86,15 +86,15 @@ router.get('/:domain/:version', async ctx => {
   }
 
   if (!config.hasOwnProperty(domain)) {
-    ctx.throw(403, 'no such domain', {
-      code: ERROR_CODES.INVALID_DOMAIN
+    ctx.throw(403, 'no such domain for apk', {
+      code: ERROR_CODES.NOT_FOUND
     })
   }
 
   if (version === 'latest') {
     ctx.body = R.sort((a, b) => compareVersion(a.version, b.version),
       config[domain])[0] || ctx.throw(403, 'no such version', {
-        code: ERROR_CODES.UNKNOWN_VERSION
+        code: ERROR_CODES.NOT_FOUND
       })
     return
   }
